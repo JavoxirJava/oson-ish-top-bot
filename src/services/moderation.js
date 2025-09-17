@@ -3,6 +3,7 @@ const mappingRepo = require('../store/mappingRepo');
 const logger4 = require('../utils/logger');
 const { escMdV2, dashify } = require('../utils/mdv2');
 const { buildMapLinks } = require('../utils/maps');
+const { BACKEND_BASE_URL } = require('../config/env');
 
 
 function renderAnnText(obj) {
@@ -34,7 +35,7 @@ function renderAnnText(obj) {
         `⏰ *Ish vaqti:* ${escMdV2(dashify(`${ann.fromTime || ''} - ${ann.toTime || ''}`))}`,
         `🗺 *Viloyat:* ${escMdV2(ann.regionName)}`,
         `🏘 *Tuman:* ${escMdV2(ann.areasName)}`,
-        `☎️ *Aloqa:* ${escMdV2(ann.contacts)}`,
+        `☎️ *Aloqa:* +998${escMdV2(ann.contacts)}`,
         ``,
         `📌 *E'lon turi:* ${escMdV2(ann.annTypeName)}`,
         `👨‍💼 *E’lon egasi:* ${escMdV2(ann.ownerFio)}`,
@@ -53,12 +54,29 @@ function renderAnnText(obj) {
     return lines.join('\n');
 }
 
-async function sendToAdmins(bot, adminIds, ann) {
+async function sendToAdmins(bot, adminIds, ann, images) {
     const text = renderAnnText(ann);
     const kb = moderationKeyboard(ann?.data.id);
     for (const chatId of adminIds) {
         try {
-            const msg = await bot.telegram.sendMessage(chatId, text, { reply_markup: kb.reply_markup, parse_mode: "MarkdownV2" });
+            let replyTo; // media groupdan birinchi xabar id
+
+            // 1) Media group (agar rasm bo'lsa). Telegram 2..10 dona rasmni qabul qiladi.
+            if (images.length >= 1) {
+                const media = images.map(p => ({ type: 'photo', media: `${BACKEND_BASE_URL}/api/v1/file/download/${p}` }));
+                const msgs = await bot.telegram.sendMediaGroup(chatId, media);
+                // sendMediaGroup array qaytaradi — odatda birinchi xabarni reply target qilamiz
+                replyTo = msgs?.[0]?.message_id;
+            }
+
+            // 2) Tugmali matn — reply ko'rinishida
+            const msg = await bot.telegram.sendMessage(chatId, text, {
+                parse_mode: "MarkdownV2",
+                reply_markup: kb.reply_markup, 
+                reply_to_message_id: replyTo, // agar rasm bo'lmasa undefined bo'ladi
+            });
+
+            // 3) Keyinchalik edit qilish uchun shu tugmali xabarning id sini saqlaymiz
             await mappingRepo.saveMapping(ann.id, chatId, msg.message_id);
         } catch (err) {
             logger4.error({ err, chatId }, 'Failed to send announcement to admin');

@@ -51,6 +51,11 @@ async function getAnnouncementById(annId) {
     return data;
 }
 
+async function getAnnouncementImagesById(annId) {
+    const { data } = await api.get(`/api/v1/vacancy/ann-resources/by-ann/${annId}`);
+    return data;
+}
+
 async function approveAnn(annId) {
     const { data } = await api.post(`/api/v1/ann/accept/${annId}`);
     return data;
@@ -61,4 +66,4 @@ async function rejectAnn(annId, reason) {
     return data;
 }
 
-module.exports = { api, login, getAnnouncementById, approveAnn, rejectAnn };
+module.exports = { api, login, getAnnouncementById, getAnnouncementImagesById, approveAnn, rejectAnn };

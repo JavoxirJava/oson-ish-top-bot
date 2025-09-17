@@ -1,7 +1,7 @@
 const express2 = require('express');
 const env6 = require('../config/env');
 const logger6 = require('../utils/logger');
-const { getAnnouncementById, login } = require('../services/backendApi');
+const { getAnnouncementById, getAnnouncementImagesById, login } = require('../services/backendApi');
 const { sendToAdmins } = require('../services/moderation');
 
 
@@ -18,7 +18,8 @@ function mountNotifyRoute(app, bot) {
             // ensure we have a token for backend
             await login();
             const ann = await getAnnouncementById(annId);
-            await sendToAdmins(bot, env6.ADMIN_IDS, ann);
+            const images = await getAnnouncementImagesById(annId);
+            await sendToAdmins(bot, env6.ADMIN_IDS, ann, images?.data);
             return res.json({ ok: true });
         } catch (err) {
             logger6.error({ err }, 'Notify route error');
