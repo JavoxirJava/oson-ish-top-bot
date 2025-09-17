@@ -1,5 +1,5 @@
 function escMdV2(s = '') {
-    return String(s).replace(/[_*[\](){}`~>#+\-=|.!]/g, '\\$&'); // minus ham shu yerda
+    return String(s).replace(/[_*[\](){}`~>#+\-=|.!]/g, '\\$&');
 }
 
 function dashify(s = '') {

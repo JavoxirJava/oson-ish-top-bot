@@ -1,7 +1,8 @@
 const { moderationKeyboard, approvedKeyboard, rejectedKeyboard } = require('../telegram/keyboards');
 const mappingRepo = require('../store/mappingRepo');
 const logger4 = require('../utils/logger');
-const { escMdV2, dashify } = require('../utils/mdv2');
+const { escMdV2 } = require('../utils/mdv2');
+const { dashify, yn, joinAddr, timeRange, salaryRange } = require('../utils/format');
 const { buildMapLinks } = require('../utils/maps');
 const { BACKEND_BASE_URL } = require('../config/env');
 
@@ -9,47 +10,45 @@ const { BACKEND_BASE_URL } = require('../config/env');
 function renderAnnText(obj) {
     const ann = annObj(obj?.data || {});
 
-    // qiymatlarni escape + chiroyli ko‘rinish uchun en dash
-    const salaryRange = dashify(`${ann.salaryFrom || ''} ${ann.annSalaryCurrency ? 'USD' : ''} - ${ann.salaryTo || ''} ${ann.annSalaryCurrency ? 'USD' : ''}`.trim());
-
     const lines = [
         `🆕 *Yangi e'lon*`,
         ``,
-        `🏢 *Kompaniya:* ${escMdV2(ann.company)}`,
-        `💼 *Vakansiya:* ${escMdV2(ann.jobName)}`,
-        `📝 *Tavsif:* ${escMdV2(ann.description)}`,
-        `📍 *Manzil:* ${escMdV2((ann.address || '') + (ann.address && (ann.regionName || ann.areasName) ? ', ' : '') + (ann.regionName || '') + (ann.areasName ? (ann.regionName ? ', ' : '') + ann.areasName : ''))}`,
+        `🏢 *Kompaniya:* ${escMdV2(ann.company ?? '—')}`,
+        `💼 *Vakansiya:* ${escMdV2(ann.jobName ?? '—')}`,
+        `📝 *Tavsif:* ${escMdV2(ann.description ?? '—')}`,
+        `📍 *Manzil:* ${escMdV2(joinAddr({ address: ann.address, regionName: ann.regionName, areasName: ann.areasName }) || '—')}`,
         ``,
-        `⏳ *Sinov muddati:* ${escMdV2(ann.isThereTrialPeriod)}`,
-        `💰 *Narxi:* ${escMdV2(ann.price + 'So\'m')}`,
-        `💵 *Maosh diapazoni:* ${escMdV2(salaryRange)}`,
-        `👨‍💻 *Tajriba:* ${escMdV2(ann.experience)}`,
-        `👥 *Ishchilar soni:* ${escMdV2(ann.peopleCnt)}`,
-        `📆 *Sinov davri:* ${escMdV2(`${ann.trialPeriod || '0'} ${ann.annTrialPeriodTypes || ''}`.trim())}`,
-        `🚻 *Jins:* ${escMdV2(ann.gender)}`,
-        `🎓 *Talaba kerakmi?* ${escMdV2(ann.studentIsNeeded)}`,
+        `⏳ *Sinov muddati:* ${escMdV2(yn(ann.isThereTrialPeriod))}`,
+        `💰 *Narxi:* ${escMdV2(ann.price != null ? `${ann.price} So'm` : '—')}`,
+        `💵 *Maosh diapazoni:* ${escMdV2(salaryRange(ann.salaryFrom, ann.salaryTo, ann.annSalaryCurrency || 'USD'))}`,
+        `👨‍💻 *Tajriba:* ${escMdV2(ann.experience ?? '—')}`,
+        `👥 *Ishchilar soni:* ${escMdV2(ann.peopleCnt ?? '—')}`,
+        `📆 *Sinov davri:* ${escMdV2(`${ann.trialPeriod ?? '0'} ${ann.annTrialPeriodTypes ?? ''}`.trim())}`,
+        `🚻 *Jins:* ${escMdV2(ann.gender ?? '—')}`,
+        `🎓 *Talaba kerakmi?* ${escMdV2(yn(ann.studentIsNeeded))}`,
         ``,
-        `👤 *Mas’ul shaxs:* ${escMdV2(ann.firstName)}`,
+        `👤 *Mas’ul shaxs:* ${escMdV2(ann.firstName ?? '—')}`,
         `📱 *Telegram:* ${ann.telegramUsername ? escMdV2(`@${ann.telegramUsername}`) : '—'}`,
-        `🛠 *Ish turi:* ${escMdV2(ann.annJobTypesName)}`,
-        `⏰ *Ish vaqti:* ${escMdV2(dashify(`${ann.fromTime || ''} - ${ann.toTime || ''}`))}`,
-        `🗺 *Viloyat:* ${escMdV2(ann.regionName)}`,
-        `🏘 *Tuman:* ${escMdV2(ann.areasName)}`,
-        `☎️ *Aloqa:* +998${escMdV2(ann.contacts)}`,
+        `🛠 *Ish turi:* ${escMdV2(ann.annJobTypesName ?? '—')}`,
+        `⏰ *Ish vaqti:* ${escMdV2(timeRange(ann.fromTime, ann.toTime))}`,
+        `🗺 *Viloyat:* ${escMdV2(ann.regionName ?? '—')}`,
+        `🏘 *Tuman:* ${escMdV2(ann.areasName ?? '—')}`,
+        // **MUHIM**: '+' ham escape bo'lsin — prefiksni ham escMdV2 ichida yozing
+        `☎️ *Aloqa:* ${escMdV2(ann.contacts ? `+998${ann.contacts}` : '—')}`,
         ``,
-        `📌 *E'lon turi:* ${escMdV2(ann.annTypeName)}`,
-        `👨‍💼 *E’lon egasi:* ${escMdV2(ann.ownerFio)}`,
-        `⌚️ *Ish vaqti turi:* ${escMdV2(ann.workTimeType)}`,
-        `🌐 *Masofaviy:* ${escMdV2(ann.isRemote)}`,
-        `🤝 *Kelishilgan ish haqi:* ${escMdV2(ann.isAgreed)}`,
+        `📌 *E'lon turi:* ${escMdV2(ann.annTypeName ?? '—')}`,
+        `👨‍💼 *E’lon egasi:* ${escMdV2(ann.ownerFio ?? '—')}`,
+        `⌚️ *Ish vaqti turi:* ${escMdV2(ann.workTimeType ?? '—')}`,
+        `🌐 *Masofaviy:* ${escMdV2(yn(ann.isRemote))}`,
+        `🤝 *Kelishilgan ish haqi:* ${escMdV2(yn(ann.isAgreed))}`,
         ``,
-        `🗓 *Yaratilgan sana:* ${escMdV2(ann.createdDate)}`,
+        `🗓 *Yaratilgan sana:* ${escMdV2(ann.createdDate ?? '—')}`,
     ];
 
     const mapBlock = buildMapLinks(ann.lat, ann.lon); // '' yoki markdown blok
     if (mapBlock) lines.push('', mapBlock);
 
-    lines.push('', `🔑 *E’lon kodi:* \`${escMdV2(ann.code)}\``);
+    lines.push('', `🔑 *E’lon kodi:* \`${escMdV2(ann.code ?? '-')}\``);
 
     return lines.join('\n');
 }
@@ -77,7 +76,7 @@ async function sendToAdmins(bot, adminIds, ann, images) {
             });
 
             // 3) Keyinchalik edit qilish uchun shu tugmali xabarning id sini saqlaymiz
-            await mappingRepo.saveMapping(ann.id, chatId, msg.message_id);
+            await mappingRepo.saveMapping(ann?.data.id, chatId, msg.message_id);
         } catch (err) {
             logger4.error({ err, chatId }, 'Failed to send announcement to admin');
         }

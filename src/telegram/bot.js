@@ -67,6 +67,8 @@ bot.on('message', async (ctx) => {
         if (!reason) return ctx.reply('Sabab matni bo\'sh bo\'lmasin');
 
         await rejectAnn(pendingAnnId, reason);
+        console.log(pendingAnnId, reason);
+        
         await clearReasonAwait(ctx.from.id);
 
         await ctx.reply('Rad etildi. Rahmat!');
