@@ -36,7 +36,7 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
       - name: 📦 Paketlarni o‘rnatish (CI)
-        run: npm ci --omit=dev
+        run: npm install --omit=dev
 
       # Kerak bo'lsa buildni yoqing
       # - name: 🏗 Build
