@@ -60,6 +60,8 @@ bot.on('message', async (ctx) => {
         if (!ctx.message?.text) return; // only text for MVP
         if (!isAdmin(ctx)) return; // ignore non-admins
 
+        console.log(ctx.message?.text);
+
         const pendingAnnId = await getReasonAwait(ctx.from.id);
         if (!pendingAnnId) return; // no reason expected
 
