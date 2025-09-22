@@ -19,7 +19,7 @@ function mountNotifyRoute(app, bot) {
             await login();
             const ann = await getAnnouncementById(annId);
             const images = await getAnnouncementImagesById(annId);
-            await sendToAdmins(bot, env6.ADMIN_IDS, ann, images?.data);
+            await sendToAdmins(bot, env6.SEND_GROUP_ID, ann, images?.data);
             return res.json({ ok: true });
         } catch (err) {
             logger6.error({ err }, 'Notify route error');

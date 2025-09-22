@@ -59,7 +59,6 @@ bot.on('message', async (ctx) => {
     try {
         if (!ctx.message?.text) return; // only text for MVP
         if (!isAdmin(ctx)) return; // ignore non-admins
-
         console.log(ctx.message?.text);
 
         const pendingAnnId = await getReasonAwait(ctx.from.id);
@@ -70,7 +69,7 @@ bot.on('message', async (ctx) => {
 
         await rejectAnn(pendingAnnId, reason);
         console.log(pendingAnnId, reason);
-        
+
         await clearReasonAwait(ctx.from.id);
 
         await ctx.reply('Rad etildi. Rahmat!');
