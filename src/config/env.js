@@ -16,7 +16,7 @@ const env = {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
-    SEND_GROUP_ID: process.env.SEND_GROUP_ID || '',
+    SEND_GROUP_ID: process.env.SEND_GROUP_ID,
     BACKEND_BASE_URL: req('BACKEND_BASE_URL'),
     BACKEND_ADMIN_PHONE: process.env.BACKEND_ADMIN_PHONE || '',
     BACKEND_ADMIN_LOGIN: process.env.BACKEND_ADMIN_LOGIN || '',

@@ -57,6 +57,7 @@ async function sendToAdmins(bot, adminIds, ann, images) {
     const text = renderAnnText(ann);
     const kb = moderationKeyboard(ann?.data.id);
     for (const chatId of adminIds) {
+        console.log(chatId);
         try {
             let replyTo; // media groupdan birinchi xabar id
 
