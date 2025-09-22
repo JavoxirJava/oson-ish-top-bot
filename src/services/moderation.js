@@ -153,7 +153,6 @@ function annObj(ann) {
         lat: ann?.lat || '',
         lon: ann?.lon || '',
     }
-
 }
 
 module.exports = { sendToAdmins, markApproved, markRejected };
