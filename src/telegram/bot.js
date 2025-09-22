@@ -58,6 +58,7 @@ bot.on('callback_query', async (ctx) => {
 bot.on('message', async (ctx) => {
     try {
         if (!ctx.message?.text) return; // only text for MVP
+        if (ctx.message.text === '/ping') return ctx.reply('PONG!');
         if (!isAdmin(ctx)) return; // ignore non-admins
         console.log(ctx.message?.text);
 
