@@ -56,7 +56,9 @@ function renderAnnText(obj) {
 async function sendToAdmins(bot, groupId, ann, images) {
     const text = renderAnnText(ann);
     const kb = moderationKeyboard(ann?.data.id);
-    console.log(groupId);
+    console.log("ID:", groupId);
+    console.log(`Base URL: ${BACKEND_BASE_URL}/api/v1/file/download/${images[0]}`);
+    
     try {
 
         let replyTo; // media groupdan birinchi xabar id
