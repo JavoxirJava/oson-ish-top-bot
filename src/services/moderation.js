@@ -53,34 +53,33 @@ function renderAnnText(obj) {
     return lines.join('\n');
 }
 
-async function sendToAdmins(bot, adminIds, ann, images) {
+async function sendToAdmins(bot, groupId, ann, images) {
     const text = renderAnnText(ann);
     const kb = moderationKeyboard(ann?.data.id);
-    for (const chatId of adminIds) {
-        console.log(chatId);
-        try {
-            let replyTo; // media groupdan birinchi xabar id
+    console.log(groupId);
+    try {
 
-            // 1) Media group (agar rasm bo'lsa). Telegram 2..10 dona rasmni qabul qiladi.
-            if (images.length >= 1) {
-                const media = images.map(p => ({ type: 'photo', media: `${BACKEND_BASE_URL}/api/v1/file/download/${p}` }));
-                const msgs = await bot.telegram.sendMediaGroup(chatId, media);
-                // sendMediaGroup array qaytaradi — odatda birinchi xabarni reply target qilamiz
-                replyTo = msgs?.[0]?.message_id;
-            }
+        let replyTo; // media groupdan birinchi xabar id
 
-            // 2) Tugmali matn — reply ko'rinishida
-            const msg = await bot.telegram.sendMessage(chatId, text, {
-                parse_mode: "MarkdownV2",
-                reply_markup: kb.reply_markup, 
-                reply_to_message_id: replyTo, // agar rasm bo'lmasa undefined bo'ladi
-            });
-
-            // 3) Keyinchalik edit qilish uchun shu tugmali xabarning id sini saqlaymiz
-            await mappingRepo.saveMapping(ann?.data.id, chatId, msg.message_id);
-        } catch (err) {
-            logger4.error({ err, chatId }, 'Failed to send announcement to admin');
+        // 1) Media group (agar rasm bo'lsa). Telegram 2..10 dona rasmni qabul qiladi.
+        if (images.length >= 1) {
+            const media = images.map(p => ({ type: 'photo', media: `${BACKEND_BASE_URL}/api/v1/file/download/${p}` }));
+            const msgs = await bot.telegram.sendMediaGroup(groupId, media);
+            // sendMediaGroup array qaytaradi — odatda birinchi xabarni reply target qilamiz
+            replyTo = msgs?.[0]?.message_id;
         }
+
+        // 2) Tugmali matn — reply ko'rinishida
+        const msg = await bot.telegram.sendMessage(groupId, text, {
+            parse_mode: "MarkdownV2",
+            reply_markup: kb.reply_markup,
+            reply_to_message_id: replyTo, // agar rasm bo'lmasa undefined bo'ladi
+        });
+
+        // 3) Keyinchalik edit qilish uchun shu tugmali xabarning id sini saqlaymiz
+        await mappingRepo.saveMapping(ann?.data.id, groupId, msg.message_id);
+    } catch (err) {
+        logger4.error({ err, groupId }, 'Failed to send announcement to admin');
     }
 }
 
@@ -152,7 +151,7 @@ function annObj(ann) {
         lat: ann?.lat || '',
         lon: ann?.lon || '',
     }
-    
+
 }
 
 module.exports = { sendToAdmins, markApproved, markRejected };
