@@ -6,9 +6,7 @@ const { approveAnn, rejectAnn } = require('../services/backendApi');
 const { approvedKeyboard, rejectedKeyboard } = require('./../telegram/keyboards');
 const { markApproved, markRejected } = require('../services/moderation');
 
-
 const bot = new Telegraf(env4.BOT_TOKEN);
-
 
 // Admin guard helper
 function isAdmin(ctx) {
@@ -20,6 +18,7 @@ function isAdmin(ctx) {
 bot.catch((err, ctx) => {
     logger5.error({ err }, 'Bot error');
 });
+
 
 // Callback: approve/reject
 bot.on('callback_query', async (ctx) => {
@@ -43,11 +42,11 @@ bot.on('callback_query', async (ctx) => {
             await ctx.reply('Rad etish sababi? (3 daqiqa ichida yuboring)', {
                 reply_markup: { force_reply: true, selective: true },
             });
-        } else if (data === 'noopAccepted') {
+        } else if (data === 'noopAccepted')
             await ctx.answerCbQuery('E\'lon tasdiqlangan');
-        } else if (data === 'noopRejected') {
+        else if (data === 'noopRejected')
             await ctx.answerCbQuery('E\'lon rad etilgan');
-        } else await ctx.answerCbQuery('');
+        else await ctx.answerCbQuery('');
     } catch (err) {
         logger5.error({ err }, 'Callback handler error');
         await ctx.answerCbQuery('Xatolik');
