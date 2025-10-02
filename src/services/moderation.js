@@ -2,7 +2,7 @@ const { moderationKeyboard, approvedKeyboard, rejectedKeyboard } = require('../t
 const mappingRepo = require('../store/mappingRepo');
 const logger4 = require('../utils/logger');
 const { escMdV2 } = require('../utils/mdv2');
-const { dashify, yn, joinAddr, timeRange, salaryRange } = require('../utils/format');
+const { yn, joinAddr, timeRange, salaryRange } = require('../utils/format');
 const { buildMapLinks } = require('../utils/maps');
 const { BACKEND_BASE_URL } = require('../config/env');
 
@@ -91,6 +91,7 @@ async function markApproved(bot, annId, adminIds) {
         try {
             await bot.telegram.editMessageReplyMarkup(chatId, messageId, undefined, approvedKeyboard().reply_markup);
         } catch (err) {
+            logger4.warn({ err, chatId, messageId }, 'Edit after approve failed');
             // If markup edit fails (old message, etc.), try edit text fallback
             try {
                 await bot.telegram.editMessageText(chatId, messageId, undefined, `✅ Tasdiqlangan\n\n${'ID: ' + annId}`);
