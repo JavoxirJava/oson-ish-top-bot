@@ -93,11 +93,11 @@ async function markApproved(bot, annId, adminIds) {
         } catch (err) {
             logger4.warn({ err, chatId, messageId }, 'Edit after approve failed');
             // If markup edit fails (old message, etc.), try edit text fallback
-            try {
-                await bot.telegram.editMessageText(chatId, messageId, undefined, `✅ Tasdiqlangan\n\n${'ID: ' + annId}`);
-            } catch (e2) {
-                logger4.warn({ err: e2, chatId, messageId }, 'Edit after approve failed');
-            }
+            // try {
+            //     await bot.telegram.editMessageText(chatId, messageId, undefined, `✅ Tasdiqlangan\n\n${'ID: ' + annId}`);
+            // } catch (e2) {
+            //     logger4.warn({ err: e2, chatId, messageId }, 'Edit after approve failed');
+            // }
         }
     }
 }
