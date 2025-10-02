@@ -1,0 +1,130 @@
+# .github/workflows/ci-cd.yml
+name: Node.js CI/CD
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Telegram notification (Deploy started)
+        if: always()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d text="Depliy jarayoni boshlandi..." \
+            -d parse_mode=Markdown
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendSticker \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d sticker="CAACAgQAAxkBAAMKZ_5Fikm9U1dAOff5x1z2RZIPd5UAAkoTAAIYdwlTeIN6-a2BPik2BA"
+
+      - name: 🔽 Repozitoriyani clone qilish
+        uses: actions/checkout@v4
+
+      - name: 🟢 Node.js versiyasini o'rnatish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Add host key (known_hosts)
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "22" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: 📦 Paketlarni o‘rnatish (CI)
+        run: npm install --omit=dev
+
+      # Kerak bo'lsa buildni yoqing
+      # - name: 🏗 Build
+      #   run: npm run build
+
+      - name: 📦 Pack release (tar.gz) - tempda yaratamiz
+        run: |
+          TAR_PATH="${RUNNER_TEMP}/release.tar.gz"
+          tar \
+            --exclude='./node_modules' \
+            --exclude='./.git' \
+            --exclude='./.github' \
+            --exclude='./*.log' \
+            --exclude='./release.tar.gz' \
+            -czf "${TAR_PATH}" .
+          ls -lh "${TAR_PATH}"
+
+      - name: 📁 Tarballni workspace’ga ko‘chirish (SCP shu yerdan oladi)
+        run: |
+          cp "${RUNNER_TEMP}/release.tar.gz" ./release.tar.gz
+          ls -lh ./release.tar.gz
+
+      - name: 📁 Serverda target papkani yaratish
+        if: github.ref == 'refs/heads/master'
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}   # root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: '22'
+          script: |
+            mkdir -p $HOME/osonishtop
+
+      - name: 📤 Tarballni serverga yuborish (SCP)
+        if: github.ref == 'refs/heads/master'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}   # root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: '22'
+          source: "release.tar.gz"          # <-- workspace ichidagi fayl
+          target: "$HOME/osonishtop"
+          overwrite: true                   # eski release.tar.gz ustidan yozish
+
+      - name: 🔁 Serverda extract + PM2 restart
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}   # root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: '22'
+          script: |
+            set -e
+            cd $HOME/osonishtop
+
+            tar xzf release.tar.gz
+            rm -f release.tar.gz
+
+            command -v pm2 >/dev/null 2>&1 || npm i -g pm2
+            npm ci --omit=dev
+
+            if [ ! -f .env ]; then echo "⚠️ .env topilmadi (serverda bo‘lishi kerak)"; fi
+
+            pm2 delete osonishtop_bot || true
+            pm2 start npm --name osonishtop_bot -- run start
+            pm2 save
+
+      - name: Telegram Notify (Success)
+        if: success()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d text="✅ *Node.js deploy MUVAFFAQIYATLI tugadi!* 🚀%0A%0A📝 *Commit:* _${{ github.event.head_commit.message }}_" \
+            -d parse_mode=Markdown
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendAnimation \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d animation="CAACAgIAAxkBAANJaBB77sVqHSUQUHiN1aueq7uhvJoAAjsPAAKzG_hJvpDMSwABF75jNgQ" \
+            -d caption="🎉 *Deploy muvaffaqiyatli yakunlandi!*" \
+            -d parse_mode=Markdown
+
+      - name: Send Telegram notification (Failure)
+        if: failure()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d text="❌ *Node.js deploy MUVAFFAQIYATSIZ tugadi!* 🚀%0A%0A📝 *Commit:* _${{ github.event.head_commit.message }}_" \
+            -d parse_mode=Markdown
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendSticker \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d sticker="CAACAgQAAxkBAAMGZ_4K_bLdPd7eaMUGv4OeC_kqDn4AAuYTAAKAq8BTiVm6hOs4-pk2BA"
