@@ -6,7 +6,6 @@ const { yn, joinAddr, timeRange, salaryRange } = require('../utils/format');
 const { buildMapLinks } = require('../utils/maps');
 const { BACKEND_BASE_URL } = require('../config/env');
 
-
 function renderAnnText(obj) {
     const ann = annObj(obj?.data || {});
 
