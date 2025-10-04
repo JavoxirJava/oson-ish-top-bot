@@ -5,6 +5,7 @@ const { escMdV2 } = require('../utils/mdv2');
 const { yn, joinAddr, timeRange, salaryRange } = require('../utils/format');
 const { buildMapLinks } = require('../utils/maps');
 const { BACKEND_BASE_URL } = require('../config/env');
+const { fetchPhotoAsInput } = require('../utils/fetchPhoto');
 
 function renderAnnText(obj) {
     const ann = annObj(obj?.data || {});
@@ -52,37 +53,54 @@ function renderAnnText(obj) {
     return lines.join('\n');
 }
 
-async function sendToAdmins(bot, groupId, ann, images) {
+async function sendToAdmins(bot, groupId, ann, images = []) {
+    const annId = ann?.data?.id || ann?.id;
+    const kb = moderationKeyboard(annId);
     const text = renderAnnText(ann);
-    const kb = moderationKeyboard(ann?.data.id);
-    console.log("ID:", groupId);
-    console.log(`Base URL: ${BACKEND_BASE_URL}/api/v1/file/download/${images[0]}`);
-    
+
     try {
+        let replyTo;
 
-        let replyTo; // media groupdan birinchi xabar id
-
-        // 1) Media group (agar rasm bo'lsa). Telegram 2..10 dona rasmni qabul qiladi.
-        if (images.length >= 1) {
-            const media = images.map(p => ({ type: 'photo', media: `${BACKEND_BASE_URL}/api/v1/file/download/${p}` }));
-            const msgs = await bot.telegram.sendMediaGroup(groupId, media);
-            // sendMediaGroup array qaytaradi — odatda birinchi xabarni reply target qilamiz
-            replyTo = msgs?.[0]?.message_id;
+        if (images.length >= 2) {
+            // 2..10 dona rasm — mediaGroup
+            const media = [];
+            for (const p of images.slice(0, 10)) {
+                try {
+                    const input = await fetchPhotoAsInput(p);
+                    media.push({ type: 'photo', media: input });
+                } catch (e) {
+                    console.warn('skip bad image', p, e?.message);
+                }
+            }
+            if (media.length >= 2) {
+                const msgs = await bot.telegram.sendMediaGroup(groupId, media);
+                replyTo = msgs?.[0]?.message_id;
+            } else if (media.length === 1) {
+                const m1 = await bot.telegram.sendPhoto(groupId, media[0].media);
+                replyTo = m1.message_id;
+            }
+        } else if (images.length === 1) {
+            try {
+                const input = await fetchPhotoAsInput(images[0]);
+                const m1 = await bot.telegram.sendPhoto(groupId, input);
+                replyTo = m1.message_id;
+            } catch (e) {
+                console.warn('single image fetch failed', e?.message);
+            }
         }
 
-        // 2) Tugmali matn — reply ko'rinishida
         const msg = await bot.telegram.sendMessage(groupId, text, {
-            parse_mode: "MarkdownV2",
+            parse_mode: 'MarkdownV2',
             reply_markup: kb.reply_markup,
-            reply_to_message_id: replyTo, // agar rasm bo'lmasa undefined bo'ladi
+            reply_to_message_id: replyTo,
         });
 
-        // 3) Keyinchalik edit qilish uchun shu tugmali xabarning id sini saqlaymiz
-        await mappingRepo.saveMapping(ann?.data.id, groupId, msg.message_id);
+        await mappingRepo.saveMapping(String(annId), String(groupId), msg.message_id);
     } catch (err) {
         logger4.error({ err, groupId }, 'Failed to send announcement to admin');
     }
 }
+
 
 async function markApproved(bot, annId, adminIds) {
     const mappings = await mappingRepo.getAllMappings(annId);
