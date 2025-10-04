@@ -1,7 +1,7 @@
 // src/routes/notify.js
 const express = require('express');
 const env = require('../config/env');
-const logger = require('../lib/logger');
+const logger = require('../utils/logger');
 const { login, getAnnouncementById, getAnnouncementImagesById } = require('../services/backendApi');
 const { sendToAdmins } = require('../services/moderation');
 const { markApproved, markRejected } = require('../services/moderation'); // sizdagi markApproved/markRejected
