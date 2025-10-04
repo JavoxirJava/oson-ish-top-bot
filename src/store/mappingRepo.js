@@ -14,9 +14,8 @@ async function getMessageId(annId, chatId) {
 async function getAllMappings(annId) {
     const obj = await redisMap.hgetall(mapKey(annId));
     const out = [];
-    for (const [chatId, messageId] of Object.entries(obj)) {
+    for (const [chatId, messageId] of Object.entries(obj))
         out.push({ chatId: Number(chatId), messageId: Number(messageId) });
-    }
     return out;
 }
 
